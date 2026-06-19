@@ -29,8 +29,9 @@
             align-items: center;
             z-index: 10;
             border-bottom: 1px solid #333;
+            flex-wrap: wrap;
         }
-        button {
+        button, select {
             background: #222;
             color: #fff;
             border: 1px solid #555;
@@ -41,9 +42,15 @@
             font-weight: 500;
             transition: background 0.2s;
         }
-        button:hover { 
+        button:hover, select:hover { 
             background: #444; 
             border-color: #777;
+        }
+        select {
+            background-color: #111;
+            color: #00ff00; /* Resalta el noticiero activo */
+            font-weight: bold;
+            outline: none;
         }
         label { 
             font-size: 14px; 
@@ -109,6 +116,13 @@
 <body>
 
     <div id="panel-controles">
+        <!-- Selector de Programa (Switch) -->
+        <label for="selector-guion">Noticiero Activo:</label>
+        <select id="selector-guion">
+            <option value="adultos">Ágape News (Adultos)</option>
+            <option value="jovenes">Explo News (Jóvenes)</option>
+        </select>
+
         <button id="btn-play">Play / Pausa (Espacio)</button>
         <label>Velocidad: <span id="val-velocidad">2.0</span></label>
         <button id="btn-subir">Más veloz (↑)</button>
@@ -120,27 +134,39 @@
     <div id="guia-lectura"></div>
 
     <div id="contenedor-texto">
-        <div id="texto">Sincronizando el guión de Agape News...</div>
+        <div id="texto">Sincronizando el guión...</div>
     </div>
 
     <script>
-        // El enlace directo de tu Google Doc publicado (visto en Captura de pantalla 2026-06-18 a la(s) 21.59.13.png)
-        const URL_PUBLICADA = "https://docs.google.com/document/d/e/2PACX-1vQuhi11tw2fjldO-WZL-VBsgx61S_5rN3H-qhVJoZDfwmp2YdqUaf5I4XB7MphoiS_Kwq14Urf39UJn/pub";
+        // Enlaces oficiales de publicación de Google Docs de tus dos programas
+        const URL_ADULTOS = "https://docs.google.com/document/d/e/2PACX-1vQuhi11tw2fjldO-WZL-VBsgx61S_5rN3H-qhVJoZDfwmp2YdqUaf5I4XB7MphoiS_Kwq14Urf39UJn/pub";
+        const URL_JOVENES = "https://docs.google.com/document/d/e/2PACX-1vRXat0Cow8oIMGgPRgwhwWI5vBAy53Q5diaiFBRqO2I4eU9MA1yiGD3ILLNhwDFF5uXtds2sOcu3JzV/pub";
 
         const contenedor = document.getElementById('contenedor-texto');
         const txtDiv = document.getElementById('texto');
+        const selectorGuion = document.getElementById('selector-guion');
         
         let velocidad = 2.0; 
         let enMovimiento = false;
         let idAnimacion = null;
 
+        // Función para obtener los datos del programa seleccionado
+        function obtenerDatosPrograma() {
+            if (selectorGuion.value === 'jovenes') {
+                return { url: URL_JOVENES, nombre: "Explo News" };
+            }
+            return { url: URL_ADULTOS, nombre: "Ágape News" };
+        }
+
         // Función que extrae y separa correctamente los párrafos de Google Docs
         async function cargarGuion() {
+            const programa = obtenerDatosPrograma();
             try {
-                txtDiv.innerText = "Sincronizando últimas modificaciones...";
+                txtDiv.innerText = `Sincronizando el guión de ${programa.nombre}...`;
+                document.title = `Teleprompter - ${programa.nombre}`;
                 
                 // Evitamos el caché agregando una marca de tiempo al final de la URL
-                const respuesta = await fetch(`${URL_PUBLICADA}?nocache=${new Date().getTime()}`);
+                const respuesta = await fetch(`${programa.url}?nocache=${new Date().getTime()}`);
                 
                 if (!respuesta.ok) throw new Error("No se pudo conectar");
                 
@@ -154,7 +180,7 @@
                 const parrafos = docHtml.querySelectorAll('#contents p');
                 
                 if (parrafos.length > 0) {
-                    // Mapeamos los párrafos aislados y los unimos explícitamente con saltos de línea dobles para una lectura ideal
+                    // Mapeamos los párrafos aislados y los unimos explícitamente con saltos de línea dobles
                     const textoEstructurado = Array.from(parrafos)
                         .map(p => p.innerText.trim())
                         .join('\n\n'); 
@@ -163,7 +189,7 @@
                     contenedor.scrollTop = 0;
                     if (enMovimiento) alternarPlay();
                 } else {
-                    txtDiv.innerText = "Error al leer la estructura del documento. Asegúrate de que siga publicado.";
+                    txtDiv.innerText = `Error al leer la estructura de ${programa.nombre}. Asegúrate de que siga publicado.`;
                 }
             } catch (error) {
                 txtDiv.innerText = "Error de conexión directa.\nIntentando un método alternativo de carga...";
@@ -174,6 +200,7 @@
         }
 
         function cargarViaIframe() {
+            const programa = obtenerDatosPrograma();
             // Eliminar iframe previo si existe
             const iframeViejo = document.getElementById('iframe-carga');
             if (iframeViejo) iframeViejo.remove();
@@ -181,14 +208,13 @@
             const iframe = document.createElement('iframe');
             iframe.id = 'iframe-carga';
             iframe.style.display = 'none';
-            iframe.src = `${URL_PUBLICADA}?nocache=${new Date().getTime()}`;
+            iframe.src = `${programa.url}?nocache=${new Date().getTime()}`;
             
             iframe.onload = function() {
                 try {
                     const docInterno = iframe.contentDocument || iframe.contentWindow.document;
                     const parrafos = docInterno.querySelectorAll('#contents p');
                     if (parrafos.length > 0) {
-                        // Aplicamos el mismo tratamiento de separación al método alternativo
                         const textoEstructurado = Array.from(parrafos)
                             .map(p => p.innerText.trim())
                             .join('\n\n');
@@ -223,6 +249,12 @@
                 document.getElementById('btn-play').style.background = "#222";
             }
         }
+
+        // DETECTOR DE CAMBIO: Al alternar en el switch, cambia el flujo al instante
+        selectorGuion.addEventListener('change', () => {
+            if (enMovimiento) alternarPlay(); // Pausa el teleprompter para evitar saltos bruscos
+            cargarGuion();
+        });
 
         // Eventos de los botones en la barra superior
         document.getElementById('btn-play').addEventListener('click', alternarPlay);
