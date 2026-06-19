@@ -124,14 +124,14 @@
     </div>
 
     <script>
-        // Tu ID original del documento de Agape News
-        const DOC_ID = "1lFcx9FfONdsXPOJ4DRv0ttIcDkSF60LYcfLCpGo_sP8";
-        
-        // Usamos la URL de exportación directa en formato de texto plano (.txt)
-        const URL_GOOGLE_DOC = `https://docs.google.com/document/d/${DOC_ID}/export?format=txt`;
-        
-        // Proxy público confiable para evadir por completo el bloqueo de seguridad CORS del navegador
-        const PROXY_CORS = "https://api.allorigins.win/raw?url=";
+// El enlace exacto de publicación web que se ve en tu captura de pantalla
+const URL_PUBLICADA = "https://docs.google.com/document/d/e/2PACX-1vQuhi11tw2fjldO-WZL-VBsgx61S_5rN3H-qhVJoZDfwmp2YdqUaf5I4XB7MphoiS_Kwq14Urf39UJn/pub";
+
+// Le añadimos el comando para forzar la salida de texto plano limpio
+const URL_GOOGLE_DOC = `${URL_PUBLICADA}?output=txt`;
+
+// El proxy público para evadir el bloqueo de seguridad CORS
+const PROXY_CORS = "https://api.allorigins.win/raw?url=";
 
         const contenedor = document.getElementById('contenedor-texto');
         const txtDiv = document.getElementById('texto');
