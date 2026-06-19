@@ -79,7 +79,7 @@
             font-size: 56px; 
             line-height: 1.6;
             font-weight: bold;
-            white-space: pre-wrap; /* Respeta estrictamente los saltos de línea del Google Doc */
+            white-space: pre-wrap; /* Respeta estrictamente los saltos de línea de Google Docs */
             transition: transform 0.2s;
             text-align: left;
         }
@@ -120,10 +120,10 @@
     <div id="guia-lectura"></div>
 
     <div id="contenedor-texto">
-        <div id="texto">Sincronizando el guión de Agape News con Google Docs...</div>
+        <div id="texto">Sincronizando el guión de Agape News...</div>
     </div>
 
-   <script>
+    <script>
         // El enlace directo de tu Google Doc publicado (visto en Captura de pantalla 2026-06-18 a la(s) 21.59.13.png)
         const URL_PUBLICADA = "https://docs.google.com/document/d/e/2PACX-1vQuhi11tw2fjldO-WZL-VBsgx61S_5rN3H-qhVJoZDfwmp2YdqUaf5I4XB7MphoiS_Kwq14Urf39UJn/pub";
 
@@ -150,12 +150,16 @@
                 const parser = new DOMParser();
                 const docHtml = parser.parseFromString(htmlBruto, 'text/html');
                 
-                // Google Docs guarda el texto dentro de etiquetas <span> o elementos del cuerpo principal #contents
+                // Google Docs guarda el texto dentro de elementos del cuerpo principal #contents
                 const contenidoPrincipal = docHtml.getElementById('contents');
                 
                 if (contenidoPrincipal) {
-                    // Extraemos exclusivamente el texto limpio respetando el formato visual
-                    txtDiv.innerText = contenidoPrincipal.innerText;
+                    // ELIMINAMOS los bloques de código de estilos estorbosos antes de extraer el texto (Corrige Captura 22.12.13)
+                    const estilosOcultos = contenidoPrincipal.querySelectorAll('style, script');
+                    estilosOcultos.forEach(el => el.remove());
+
+                    // Extraemos exclusivamente el texto limpio de las noticias
+                    txtDiv.innerText = contenidoPrincipal.innerText.trim();
                     contenedor.scrollTop = 0;
                     if (enMovimiento) alternarPlay();
                 } else {
@@ -164,7 +168,7 @@
             } catch (error) {
                 txtDiv.innerText = "Error de conexión directa.\nIntentando un método alternativo de carga...";
                 console.error(error);
-                // Si falla el fetch directo por restricciones locales, usamos un iframe oculto para extraer el texto
+                // Si falla el fetch directo por restricciones del navegador, usamos el iframe oculto de respaldo
                 cargarViaIframe();
             }
         }
@@ -184,7 +188,11 @@
                     const docInterno = iframe.contentDocument || iframe.contentWindow.document;
                     const contenido = docInterno.getElementById('contents');
                     if (contenido) {
-                        txtDiv.innerText = contenido.innerText;
+                        // Limpieza idéntica para eliminar fuentes y estilos del método de respaldo
+                        const estilosOcultos = contenido.querySelectorAll('style, script');
+                        estilosOcultos.forEach(el => el.remove());
+
+                        txtDiv.innerText = contenido.innerText.trim();
                         contenedor.scrollTop = 0;
                     }
                 } catch (e) {
@@ -194,7 +202,7 @@
             document.body.appendChild(iframe);
         }
 
-        // Bucle de animación del Teleprompter
+        // Bucle de animación suave mediante requestAnimationFrame
         function desplazar() {
             if (enMovimiento) {
                 contenedor.scrollTop += velocidad;
@@ -215,7 +223,7 @@
             }
         }
 
-        // Eventos de los botones de control
+        // Eventos de los botones en la barra superior
         document.getElementById('btn-play').addEventListener('click', alternarPlay);
         
         document.getElementById('btn-subir').addEventListener('click', () => {
@@ -235,10 +243,10 @@
 
         document.getElementById('btn-recargar').addEventListener('click', cargarGuion);
 
-        // Atajos de teclado
+        // Control avanzado mediante atajos de teclado globales
         window.addEventListener('keydown', (e) => {
             if (e.code === "Space") {
-                e.preventDefault();
+                e.preventDefault(); // Evita que la pantalla salte abruptamente
                 alternarPlay();
             }
             if (e.code === "ArrowUp") {
@@ -253,6 +261,8 @@
             }
         });
 
-        // Ejecución inicial automática
+        // Carga inicial automática al abrir la página
         cargarGuion();
     </script>
+</body>
+</html>
