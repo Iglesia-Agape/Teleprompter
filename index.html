@@ -123,15 +123,9 @@
         <div id="texto">Sincronizando el guión de Agape News con Google Docs...</div>
     </div>
 
-    <script>
-// El enlace exacto de publicación web que se ve en tu captura de pantalla
-const URL_PUBLICADA = "https://docs.google.com/document/d/e/2PACX-1vQuhi11tw2fjldO-WZL-VBsgx61S_5rN3H-qhVJoZDfwmp2YdqUaf5I4XB7MphoiS_Kwq14Urf39UJn/pub";
-
-// Le añadimos el comando para forzar la salida de texto plano limpio
-const URL_GOOGLE_DOC = `${URL_PUBLICADA}?output=txt`;
-
-// El proxy público para evadir el bloqueo de seguridad CORS
-const PROXY_CORS = "https://api.allorigins.win/raw?url=";
+   <script>
+        // El enlace directo de tu Google Doc publicado (visto en Captura de pantalla 2026-06-18 a la(s) 21.59.13.png)
+        const URL_PUBLICADA = "https://docs.google.com/document/d/e/2PACX-1vQuhi11tw2fjldO-WZL-VBsgx61S_5rN3H-qhVJoZDfwmp2YdqUaf5I4XB7MphoiS_Kwq14Urf39UJn/pub";
 
         const contenedor = document.getElementById('contenedor-texto');
         const txtDiv = document.getElementById('texto');
@@ -140,36 +134,67 @@ const PROXY_CORS = "https://api.allorigins.win/raw?url=";
         let enMovimiento = false;
         let idAnimacion = null;
 
-        // Cargar texto evadiendo las restricciones de CORS de forma limpia
+        // Función que limpia el HTML directo de Google Docs sin usar proxies externos
         async function cargarGuion() {
             try {
                 txtDiv.innerText = "Sincronizando últimas modificaciones...";
                 
-                // Agregamos un número aleatorio al final para forzar a Google y al proxy a entregarnos el texto más nuevo
-                const urlDestino = encodeURIComponent(`${URL_GOOGLE_DOC}&nocache=${new Date().getTime()}`);
-                const respuesta = await fetch(`${PROXY_CORS}${urlDestino}`);
+                // Evitamos el caché agregando una marca de tiempo al final de la URL
+                const respuesta = await fetch(`${URL_PUBLICADA}?nocache=${new Date().getTime()}`);
                 
-                if (!respuesta.ok) throw new Error("No se pudo obtener el archivo.");
+                if (!respuesta.ok) throw new Error("No se pudo conectar");
                 
-                const textoPlano = await respuesta.text();
+                const htmlBruto = await respuesta.text();
                 
-                // Validación para asegurar que no nos devuelva una página de error o login de Google
-                if (textoPlano.includes("<!DOCTYPE html>") || textoPlano.length < 10) {
-                    txtDiv.innerText = "Error: El documento debe estar publicado en la web.\n\nPor favor ve a tu Google Doc, haz clic en Archivo > Compartir > Publicar en la Web y presiona el botón azul 'Publicar'.";
-                    return;
+                // Creamos un elemento temporal para parsear el código HTML del documento publicado
+                const parser = new DOMParser();
+                const docHtml = parser.parseFromString(htmlBruto, 'text/html');
+                
+                // Google Docs guarda el texto dentro de etiquetas <span> o elementos del cuerpo principal #contents
+                const contenidoPrincipal = docHtml.getElementById('contents');
+                
+                if (contenidoPrincipal) {
+                    // Extraemos exclusivamente el texto limpio respetando el formato visual
+                    txtDiv.innerText = contenidoPrincipal.innerText;
+                    contenedor.scrollTop = 0;
+                    if (enMovimiento) alternarPlay();
+                } else {
+                    txtDiv.innerText = "Error al leer la estructura del documento. Asegúrate de que siga publicado.";
                 }
-
-                txtDiv.innerText = textoPlano;
-                contenedor.scrollTop = 0; // Reiniciar arriba de la pantalla al cargar
-                
-                if (enMovimiento) alternarPlay(); // Si estaba corriendo, pausar
             } catch (error) {
-                txtDiv.innerText = "Error al conectar con el servidor de Google Docs.\nIntenta presionar de nuevo 'Actualizar Guión' en unos momentos.";
+                txtDiv.innerText = "Error de conexión directa.\nIntentando un método alternativo de carga...";
                 console.error(error);
+                // Si falla el fetch directo por restricciones locales, usamos un iframe oculto para extraer el texto
+                cargarViaIframe();
             }
         }
 
-        // Bucle de animación suave mediante requestAnimationFrame
+        function cargarViaIframe() {
+            // Eliminar iframe previo si existe
+            const iframeViejo = document.getElementById('iframe-carga');
+            if (iframeViejo) iframeViejo.remove();
+
+            const iframe = document.createElement('iframe');
+            iframe.id = 'iframe-carga';
+            iframe.style.display = 'none';
+            iframe.src = `${URL_PUBLICADA}?nocache=${new Date().getTime()}`;
+            
+            iframe.onload = function() {
+                try {
+                    const docInterno = iframe.contentDocument || iframe.contentWindow.document;
+                    const contenido = docInterno.getElementById('contents');
+                    if (contenido) {
+                        txtDiv.innerText = contenido.innerText;
+                        contenedor.scrollTop = 0;
+                    }
+                } catch (e) {
+                    txtDiv.innerText = "Error de seguridad (CORS).\nPor favor, verifica la configuración de publicación de tu Google Doc.";
+                }
+            };
+            document.body.appendChild(iframe);
+        }
+
+        // Bucle de animación del Teleprompter
         function desplazar() {
             if (enMovimiento) {
                 contenedor.scrollTop += velocidad;
@@ -190,7 +215,7 @@ const PROXY_CORS = "https://api.allorigins.win/raw?url=";
             }
         }
 
-        // Eventos de los botones en la barra superior
+        // Eventos de los botones de control
         document.getElementById('btn-play').addEventListener('click', alternarPlay);
         
         document.getElementById('btn-subir').addEventListener('click', () => {
@@ -210,10 +235,10 @@ const PROXY_CORS = "https://api.allorigins.win/raw?url=";
 
         document.getElementById('btn-recargar').addEventListener('click', cargarGuion);
 
-        // Control avanzado mediante atajos de teclado globales
+        // Atajos de teclado
         window.addEventListener('keydown', (e) => {
             if (e.code === "Space") {
-                e.preventDefault(); // Evita que la pantalla salte abruptamente
+                e.preventDefault();
                 alternarPlay();
             }
             if (e.code === "ArrowUp") {
@@ -228,8 +253,6 @@ const PROXY_CORS = "https://api.allorigins.win/raw?url=";
             }
         });
 
-        // Carga inicial al abrir la página
+        // Ejecución inicial automática
         cargarGuion();
     </script>
-</body>
-</html>
