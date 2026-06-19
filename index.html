@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teleprompter Inteligente - Agape News</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #050505;
+            color: #ffffff;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Evita barras de scroll rebeldes */
+        }
+        /* Controles superiores */
+        #panel-controles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(20, 20, 20, 0.95);
+            padding: 12px 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            z-index: 10;
+            border-bottom: 1px solid #333;
+        }
+        button {
+            background: #222;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        button:hover { 
+            background: #444; 
+            border-color: #777;
+        }
+        label { 
+            font-size: 14px; 
+            color: #aaa; 
+            font-weight: bold;
+        }
+        #val-velocidad {
+            color: #00ff00;
+        }
+
+        /* Contenedor del texto del teleprompter */
+        #contenedor-texto {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            overflow-y: auto;
+            padding: 45vh 12% 55vh 12%; /* Espacio arriba y abajo para mantener la lectura al centro */
+            scroll-behavior: linear;
+        }
+        
+        /* Ocultar barra de scroll para limpieza visual */
+        #contenedor-texto::-webkit-scrollbar {
+            display: none;
+        }
+        #contenedor-texto {
+            -ms-overflow-style: none;  /* IE y Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+
+        #texto {
+            font-size: 56px; /* Tamaño de letra ideal para lectura */
+            line-height: 1.6;
+            font-weight: bold;
+            white-space: pre-wrap; /* Respeta estrictamente los saltos de línea del Google Doc */
+            transition: transform 0.2s;
+            text-align: left;
+        }
+        
+        /* Efecto Espejo para cristales físicos de teleprompter */
+        .espejo {
+            transform: scaleX(-1);
+            text-align: right; 
+        }
+        
+        /* Línea de guía visual central para el locutor */
+        #guia-lectura {
+            position: fixed;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            transform: translateY(-50%);
+            border-top: 2px dashed rgba(0, 255, 0, 0.3);
+            border-bottom: 2px dashed rgba(0, 255, 0, 0.3);
+            background: rgba(0, 255, 0, 0.02);
+            pointer-events: none;
+            z-index: 5;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="panel-controles">
+        <button id="btn-play">Play / Pausa (Espacio)</button>
+        <label>Velocidad: <span id="val-velocidad">2.0</span></label>
+        <button id="btn-subir">Más veloz (↑)</button>
+        <button id="btn-bajar">Más lento (↓)</button>
+        <button id="btn-espejo">Modo Espejo</button>
+        <button id="btn-recargar">Actualizar Guión</button>
+    </div>
+
+    <div id="guia-lectura"></div>
+
+    <div id="contenedor-texto">
+        <div id="texto">Sincronizando el guión de Agape News con Google Docs...</div>
+    </div>
+
+    <script>
+        // Enlace modificado optimizado para recibir texto plano limpio
+        const URL_GOOGLE_DOC = "https://docs.google.com/document/d/e/2PACX-1vQuhi11tw2fjldO-WZL-VBsgx61S_5rN3H-qhVJoZDfwmp2YdqUaf5I4XB7MphoiS_Kwq14Urf39UJn/pub?output=txt";
+
+        const contenedor = document.getElementById('contenedor-texto');
+        const txtDiv = document.getElementById('texto');
+        
+        let velocidad = 2.0; 
+        let enMovimiento = false;
+        let idAnimacion = null;
+
+        // Cargar texto desde Google Docs usando Fetch API
+        async function cargarGuion() {
+            try {
+                txtDiv.innerText = "Sincronizando últimas modificaciones...";
+                // Añadimos un parámetro de tiempo dinámico para evitar que el navegador guarde el texto viejo en caché
+                const respuesta = await fetch(`${URL_GOOGLE_DOC}&_cb=${new Date().getTime()}`);
+                if (!respuesta.ok) throw new Error("No se pudo obtener el archivo.");
+                
+                const textoPlano = await respuesta.text();
+                txtDiv.innerText = textoPlano;
+                contenedor.scrollTop = 0; // Reiniciar arriba de la pantalla al recargar
+                
+                if (enMovimiento) alternarPlay(); // Si estaba corriendo, pausar
+            } catch (error) {
+                txtDiv.innerText = "Error al conectar con Google Docs.\nVerifica que siga publicado como texto plano y que tengas conexión a internet.";
+                console.error(error);
+            }
+        }
+
+        // Bucle de animación suave mediante requestAnimationFrame (evita tirones visuales)
+        function desplazar() {
+            if (enMovimiento) {
+                contenedor.scrollTop += velocidad;
+                idAnimacion = requestAnimationFrame(desplazar);
+            }
+        }
+
+        function alternarPlay() {
+            enMovimiento = !enMovimiento;
+            if (enMovimiento) {
+                desplazar();
+                document.getElementById('btn-play').innerText = "Pausa (Espacio)";
+                document.getElementById('btn-play').style.background = "#441111";
+            } else {
+                cancelAnimationFrame(idAnimacion);
+                document.getElementById('btn-play').innerText = "Play (Espacio)";
+                document.getElementById('btn-play').style.background = "#222";
+            }
+        }
+
+        // Eventos de los botones en la barra superior
+        document.getElementById('btn-play').addEventListener('click', alternarPlay);
+        
+        document.getElementById('btn-subir').addEventListener('click', () => {
+            velocidad += 0.5;
+            document.getElementById('val-velocidad').innerText = velocidad.toFixed(1);
+        });
+
+        document.getElementById('btn-bajar').addEventListener('click', () => {
+            if (velocidad > 0.5) velocidad -= 0.5;
+            document.getElementById('val-velocidad').innerText = velocidad.toFixed(1);
+        });
+
+        document.getElementById('btn-espejo').addEventListener('click', () => {
+            txtDiv.classList.toggle('espejo');
+            document.getElementById('btn-espejo').style.background = txtDiv.classList.contains('espejo') ? "#114411" : "#222";
+        });
+
+        document.getElementById('btn-recargar').addEventListener('click', cargarGuion);
+
+        // Control avanzado mediante atajos de teclado globales
+        window.addEventListener('keydown', (e) => {
+            if (e.code === "Space") {
+                e.preventDefault(); // Evita que la pantalla salte abruptamente
+                alternarPlay();
+            }
+            if (e.code === "ArrowUp") {
+                e.preventDefault();
+                velocidad += 0.5;
+                document.getElementById('val-velocidad').innerText = velocidad.toFixed(1);
+            }
+            if (e.code === "ArrowDown") {
+                e.preventDefault();
+                if (velocidad > 0.5) velocidad -= 0.5;
+                document.getElementById('val-velocidad').innerText = velocidad.toFixed(1);
+            }
+        });
+
+        // Carga inicial al abrir la página
+        cargarGuion();
+    </script>
+</body>
+</html>
