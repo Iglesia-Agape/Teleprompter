@@ -79,7 +79,7 @@
             font-size: 56px; 
             line-height: 1.6;
             font-weight: bold;
-            white-space: pre-wrap; /* Respeta estrictamente los saltos de línea de Google Docs */
+            white-space: pre-wrap; /* Respeta estrictamente los saltos de línea inyectados por JS */
             transition: transform 0.2s;
             text-align: left;
         }
@@ -134,7 +134,7 @@
         let enMovimiento = false;
         let idAnimacion = null;
 
-        // Función que limpia el HTML directo de Google Docs sin usar proxies externos
+        // Función que extrae y separa correctamente los párrafos de Google Docs
         async function cargarGuion() {
             try {
                 txtDiv.innerText = "Sincronizando últimas modificaciones...";
@@ -150,16 +150,16 @@
                 const parser = new DOMParser();
                 const docHtml = parser.parseFromString(htmlBruto, 'text/html');
                 
-                // Google Docs guarda el texto dentro de elementos del cuerpo principal #contents
-                const contenidoPrincipal = docHtml.getElementById('contents');
+                // Google Docs estructura cada línea o bloque de texto en etiquetas de párrafo <p>
+                const parrafos = docHtml.querySelectorAll('#contents p');
                 
-                if (contenidoPrincipal) {
-                    // ELIMINAMOS los bloques de código de estilos estorbosos antes de extraer el texto (Corrige Captura 22.12.13)
-                    const estilosOcultos = contenidoPrincipal.querySelectorAll('style, script');
-                    estilosOcultos.forEach(el => el.remove());
+                if (parrafos.length > 0) {
+                    // Mapeamos los párrafos aislados y los unimos explícitamente con saltos de línea dobles para una lectura ideal
+                    const textoEstructurado = Array.from(parrafos)
+                        .map(p => p.innerText.trim())
+                        .join('\n\n'); 
 
-                    // Extraemos exclusivamente el texto limpio de las noticias
-                    txtDiv.innerText = contenidoPrincipal.innerText.trim();
+                    txtDiv.innerText = textoEstructurado;
                     contenedor.scrollTop = 0;
                     if (enMovimiento) alternarPlay();
                 } else {
@@ -168,7 +168,7 @@
             } catch (error) {
                 txtDiv.innerText = "Error de conexión directa.\nIntentando un método alternativo de carga...";
                 console.error(error);
-                // Si falla el fetch directo por restricciones del navegador, usamos el iframe oculto de respaldo
+                // Plan B por si el navegador bloquea la consulta directa en entornos locales
                 cargarViaIframe();
             }
         }
@@ -186,13 +186,14 @@
             iframe.onload = function() {
                 try {
                     const docInterno = iframe.contentDocument || iframe.contentWindow.document;
-                    const contenido = docInterno.getElementById('contents');
-                    if (contenido) {
-                        // Limpieza idéntica para eliminar fuentes y estilos del método de respaldo
-                        const estilosOcultos = contenido.querySelectorAll('style, script');
-                        estilosOcultos.forEach(el => el.remove());
-
-                        txtDiv.innerText = contenido.innerText.trim();
+                    const parrafos = docInterno.querySelectorAll('#contents p');
+                    if (parrafos.length > 0) {
+                        // Aplicamos el mismo tratamiento de separación al método alternativo
+                        const textoEstructurado = Array.from(parrafos)
+                            .map(p => p.innerText.trim())
+                            .join('\n\n');
+                        
+                        txtDiv.innerText = textoEstructurado;
                         contenedor.scrollTop = 0;
                     }
                 } catch (e) {
