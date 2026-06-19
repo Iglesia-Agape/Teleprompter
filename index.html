@@ -62,7 +62,7 @@
             width: 100%;
             height: 100vh;
             overflow-y: auto;
-            padding: 45vh 12% 55vh 12%; /* Espacio arriba y abajo para mantener la lectura al centro */
+            padding: 45vh 12% 55vh 12%; /* Mantiene la lectura al centro de la pantalla */
             scroll-behavior: linear;
         }
         
@@ -76,7 +76,7 @@
         }
 
         #texto {
-            font-size: 56px; /* Tamaño de letra ideal para lectura */
+            font-size: 56px; 
             line-height: 1.6;
             font-weight: bold;
             white-space: pre-wrap; /* Respeta estrictamente los saltos de línea del Google Doc */
@@ -124,8 +124,14 @@
     </div>
 
     <script>
-        // Enlace modificado optimizado para recibir texto plano limpio
-      const URL_GOOGLE_DOC = "https://docs.google.com/document/d/1lFcx9FfONdsXPOJ4DRv0ttIcDkSF60LYcfLCpGo_sP8/export?format=txt";
+        // Tu ID original del documento de Agape News
+        const DOC_ID = "1lFcx9FfONdsXPOJ4DRv0ttIcDkSF60LYcfLCpGo_sP8";
+        
+        // Usamos la URL de exportación directa en formato de texto plano (.txt)
+        const URL_GOOGLE_DOC = `https://docs.google.com/document/d/${DOC_ID}/export?format=txt`;
+        
+        // Proxy público confiable para evadir por completo el bloqueo de seguridad CORS del navegador
+        const PROXY_CORS = "https://api.allorigins.win/raw?url=";
 
         const contenedor = document.getElementById('contenedor-texto');
         const txtDiv = document.getElementById('texto');
@@ -134,26 +140,36 @@
         let enMovimiento = false;
         let idAnimacion = null;
 
-        // Cargar texto desde Google Docs usando Fetch API
+        // Cargar texto evadiendo las restricciones de CORS de forma limpia
         async function cargarGuion() {
             try {
                 txtDiv.innerText = "Sincronizando últimas modificaciones...";
-                // Añadimos un parámetro de tiempo dinámico para evitar que el navegador guarde el texto viejo en caché
-                const respuesta = await fetch(`${URL_GOOGLE_DOC}&_cb=${new Date().getTime()}`);
+                
+                // Agregamos un número aleatorio al final para forzar a Google y al proxy a entregarnos el texto más nuevo
+                const urlDestino = encodeURIComponent(`${URL_GOOGLE_DOC}&nocache=${new Date().getTime()}`);
+                const respuesta = await fetch(`${PROXY_CORS}${urlDestino}`);
+                
                 if (!respuesta.ok) throw new Error("No se pudo obtener el archivo.");
                 
                 const textoPlano = await respuesta.text();
+                
+                // Validación para asegurar que no nos devuelva una página de error o login de Google
+                if (textoPlano.includes("<!DOCTYPE html>") || textoPlano.length < 10) {
+                    txtDiv.innerText = "Error: El documento debe estar publicado en la web.\n\nPor favor ve a tu Google Doc, haz clic en Archivo > Compartir > Publicar en la Web y presiona el botón azul 'Publicar'.";
+                    return;
+                }
+
                 txtDiv.innerText = textoPlano;
-                contenedor.scrollTop = 0; // Reiniciar arriba de la pantalla al recargar
+                contenedor.scrollTop = 0; // Reiniciar arriba de la pantalla al cargar
                 
                 if (enMovimiento) alternarPlay(); // Si estaba corriendo, pausar
             } catch (error) {
-                txtDiv.innerText = "Error al conectar con Google Docs.\nVerifica que siga publicado como texto plano y que tengas conexión a internet.";
+                txtDiv.innerText = "Error al conectar con el servidor de Google Docs.\nIntenta presionar de nuevo 'Actualizar Guión' en unos momentos.";
                 console.error(error);
             }
         }
 
-        // Bucle de animación suave mediante requestAnimationFrame (evita tirones visuales)
+        // Bucle de animación suave mediante requestAnimationFrame
         function desplazar() {
             if (enMovimiento) {
                 contenedor.scrollTop += velocidad;
