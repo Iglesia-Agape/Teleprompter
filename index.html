@@ -2,66 +2,214 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="color-scheme" content="dark">
     <title>Teleprompter Inteligente - Agape News</title>
     <style>
+        :root {
+            --bg: #050505;
+            --panel-bg: rgba(18, 18, 18, 0.96);
+            --accent: #00ff6a;
+            --accent-dim: rgba(0, 255, 106, 0.15);
+            --border: #2a2a2a;
+            --text-dim: #999;
+            --danger: #ff4d4d;
+            --control-h: 52px;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
         * {
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
-        body {
-            background-color: #050505;
-            color: #ffffff;
+
+        html, body {
+            background-color: var(--bg);
+            color: #fff;
             font-family: 'Helvetica Neue', Arial, sans-serif;
             margin: 0;
             padding: 0;
-            overflow: hidden; /* Evita barras de scroll rebeldes */
+            overflow: hidden;
+            height: 100%;
+            -webkit-user-select: none;
+            user-select: none;
+            touch-action: none;
         }
-        /* Controles superiores */
+
+        /* ===================== PANEL DE CONTROLES ===================== */
         #panel-controles {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            background: rgba(20, 20, 20, 0.95);
-            padding: 12px 20px;
+            background: var(--panel-bg);
+            padding: calc(10px + var(--safe-top)) 16px 10px 16px;
             display: flex;
-            gap: 15px;
+            gap: 10px;
             align-items: center;
-            z-index: 10;
-            border-bottom: 1px solid #333;
+            z-index: 20;
+            border-bottom: 1px solid var(--border);
             flex-wrap: wrap;
+            backdrop-filter: blur(6px);
+            transition: transform 0.35s ease, opacity 0.35s ease;
         }
-        button, select {
-            background: #222;
-            color: #fff;
-            border: 1px solid #555;
-            padding: 8px 16px;
-            cursor: pointer;
-            font-size: 14px;
-            border-radius: 4px;
-            font-weight: 500;
-            transition: background 0.2s;
-        }
-        button:hover, select:hover { 
-            background: #444; 
-            border-color: #777;
-        }
-        select {
-            background-color: #111;
-            color: #00ff00; /* Resalta el noticiero activo */
-            font-weight: bold;
-            outline: none;
-        }
-        label { 
-            font-size: 14px; 
-            color: #aaa; 
-            font-weight: bold;
-        }
-        #val-velocidad {
-            color: #00ff00;
+        #panel-controles.oculto {
+            transform: translateY(-110%);
+            opacity: 0;
+            pointer-events: none;
         }
 
-        /* Contenedor del texto del teleprompter */
+        .grupo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 8px;
+            border-radius: 8px;
+        }
+
+        button, select {
+            background: #1c1c1c;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 0 14px;
+            height: var(--control-h);
+            min-width: var(--control-h);
+            cursor: pointer;
+            font-size: 15px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: background 0.15s, border-color 0.15s, transform 0.1s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+        }
+        button:hover, select:hover {
+            background: #333;
+            border-color: #666;
+        }
+        button:active {
+            transform: scale(0.95);
+            background: #444;
+        }
+        button.activo {
+            background: var(--accent-dim);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        button#btn-play {
+            background: var(--accent-dim);
+            border-color: var(--accent);
+            color: var(--accent);
+            min-width: 130px;
+        }
+        button#btn-play.en-marcha {
+            background: rgba(255, 77, 77, 0.15);
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+        button.icono {
+            font-size: 20px;
+            min-width: var(--control-h);
+            padding: 0;
+        }
+
+        select {
+            background-color: #111;
+            color: var(--accent);
+            font-weight: bold;
+            outline: none;
+            appearance: none;
+            background-image: linear-gradient(45deg, transparent 50%, var(--accent) 50%), linear-gradient(135deg, var(--accent) 50%, transparent 50%);
+            background-position: calc(100% - 18px) calc(1.1em + 2px), calc(100% - 13px) calc(1.1em + 2px);
+            background-size: 5px 5px, 5px 5px;
+            background-repeat: no-repeat;
+            padding-right: 34px;
+        }
+
+        label {
+            font-size: 13px;
+            color: var(--text-dim);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .stepper {
+            display: flex;
+            align-items: center;
+            background: #1c1c1c;
+            border: 1px solid #444;
+            border-radius: 8px;
+            height: var(--control-h);
+            overflow: hidden;
+        }
+        .stepper button {
+            border: none;
+            border-radius: 0;
+            background: transparent;
+            height: 100%;
+            width: 44px;
+            font-size: 20px;
+        }
+        .stepper button:hover { background: #333; }
+        .stepper .valor {
+            min-width: 46px;
+            text-align: center;
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 15px;
+            padding: 0 4px;
+        }
+
+        #estado-conexion {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-left: auto;
+        }
+        .punto-estado {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 6px var(--accent);
+            transition: background 0.3s, box-shadow 0.3s;
+        }
+        .punto-estado.error {
+            background: var(--danger);
+            box-shadow: 0 0 6px var(--danger);
+        }
+        .punto-estado.cargando {
+            background: #ffb800;
+            box-shadow: 0 0 6px #ffb800;
+            animation: parpadeo 1s infinite;
+        }
+        @keyframes parpadeo { 50% { opacity: 0.3; } }
+
+        /* Botón flotante para mostrar panel oculto */
+        #btn-mostrar-panel {
+            position: fixed;
+            top: calc(10px + var(--safe-top));
+            right: 16px;
+            z-index: 21;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(28, 28, 28, 0.9);
+            border: 1px solid #444;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        #btn-mostrar-panel.visible { display: flex; }
+
+        /* ===================== TEXTO / SCROLL ===================== */
         #contenedor-texto {
             position: absolute;
             top: 0;
@@ -69,88 +217,264 @@
             width: 100%;
             height: 100vh;
             overflow-y: auto;
-            padding: 45vh 12% 55vh 12%; /* Mantiene la lectura al centro de la pantalla */
-            scroll-behavior: linear;
+            padding: 46vh 8% 54vh 8%;
+            scroll-behavior: auto;
         }
-        
-        /* Ocultar barra de scroll para limpieza visual */
-        #contenedor-texto::-webkit-scrollbar {
-            display: none;
-        }
+        #contenedor-texto::-webkit-scrollbar { display: none; }
         #contenedor-texto {
-            -ms-overflow-style: none;  /* IE y Edge */
-            scrollbar-width: none;  /* Firefox */
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
 
         #texto {
-            font-size: 56px; 
-            line-height: 1.6;
-            font-weight: bold;
-            white-space: pre-wrap; /* Respeta estrictamente los saltos de línea inyectados por JS */
-            transition: transform 0.2s;
+            font-size: 64px;
+            line-height: 1.55;
+            font-weight: 700;
+            white-space: pre-wrap;
             text-align: left;
+            transition: font-size 0.15s ease;
+            letter-spacing: 0.01em;
         }
-        
-        /* Efecto Espejo para cristales físicos de teleprompter */
+
+        #texto mark {
+            background: none;
+            color: inherit;
+        }
+
         .espejo {
             transform: scaleX(-1);
-            text-align: right; 
+            text-align: right;
         }
-        
-        /* Línea de guía visual central para el locutor */
+
         #guia-lectura {
             position: fixed;
             top: 50%;
             left: 0;
             width: 100%;
-            height: 80px;
+            height: 1.55em;
+            font-size: 64px;
             transform: translateY(-50%);
-            border-top: 2px dashed rgba(0, 255, 0, 0.3);
-            border-bottom: 2px dashed rgba(0, 255, 0, 0.3);
-            background: rgba(0, 255, 0, 0.02);
+            border-top: 2px dashed rgba(0, 255, 106, 0.3);
+            border-bottom: 2px dashed rgba(0, 255, 106, 0.3);
+            background: rgba(0, 255, 106, 0.02);
             pointer-events: none;
             z-index: 5;
+            transition: font-size 0.15s ease;
+        }
+        #guia-lectura.oculta { opacity: 0; }
+
+        /* Triángulos indicadores laterales en la línea de lectura */
+        #guia-lectura::before, #guia-lectura::after {
+            content: "";
+            position: absolute;
+            width: 0; height: 0;
+            border-style: solid;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        #guia-lectura::before {
+            left: 6px;
+            border-width: 9px 0 9px 12px;
+            border-color: transparent transparent transparent var(--accent);
+            opacity: 0.7;
+        }
+        #guia-lectura::after {
+            right: 6px;
+            border-width: 9px 12px 9px 0;
+            border-color: transparent var(--accent) transparent transparent;
+            opacity: 0.7;
+        }
+
+        /* Barra de progreso de lectura */
+        #barra-progreso {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            height: 5px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.06);
+            z-index: 15;
+        }
+        #barra-progreso-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent);
+            transition: width 0.1s linear;
+        }
+
+        /* Cuenta atrás antes de iniciar */
+        #cuenta-atras {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 30;
+            font-size: 30vh;
+            font-weight: 800;
+            color: var(--accent);
+        }
+        #cuenta-atras.visible { display: flex; }
+
+        /* Zonas táctiles invisibles para tablet (tap centro = play/pausa, laterales = velocidad) */
+        #zona-tactil {
+            position: fixed;
+            top: 90px;
+            left: 0;
+            width: 100%;
+            height: calc(100% - 90px);
+            z-index: 4;
+            display: flex;
+        }
+        #zona-tactil > div { flex: 1; height: 100%; }
+
+        /* Aviso reloj / hora actual, útil en monitor de estudio */
+        #reloj {
+            position: fixed;
+            bottom: 10px;
+            right: 16px;
+            font-size: 14px;
+            color: var(--text-dim);
+            z-index: 15;
+            font-variant-numeric: tabular-nums;
+            background: rgba(0,0,0,0.4);
+            padding: 4px 10px;
+            border-radius: 6px;
+        }
+
+        @media (max-width: 700px) {
+            label { display: none; }
+            .grupo { padding: 2px 4px; gap: 6px; }
+            #panel-controles { gap: 6px; padding-left: 10px; padding-right: 10px; }
+            button, select { padding: 0 10px; font-size: 14px; }
         }
     </style>
 </head>
 <body>
 
     <div id="panel-controles">
-        <!-- Selector de Programa (Switch) -->
-        <label for="selector-guion">Noticiero Activo:</label>
-        <select id="selector-guion">
-            <option value="adultos">Ágape News (Adultos)</option>
-            <option value="jovenes">Explo News (Jóvenes)</option>
-        </select>
+        <div class="grupo">
+            <label for="selector-guion">Noticiero:</label>
+            <select id="selector-guion">
+                <option value="adultos">Ágape News (Adultos)</option>
+                <option value="jovenes">Explo News (Jóvenes)</option>
+            </select>
+        </div>
 
-        <button id="btn-play">Play / Pausa (Espacio)</button>
-        <label>Velocidad: <span id="val-velocidad">2.0</span></label>
-        <button id="btn-subir">Más veloz (↑)</button>
-        <button id="btn-bajar">Más lento (↓)</button>
-        <button id="btn-espejo">Modo Espejo</button>
-        <button id="btn-recargar">Actualizar Guión</button>
+        <div class="grupo">
+            <button id="btn-play" title="Espacio">▶ Play</button>
+        </div>
+
+        <div class="grupo">
+            <label>Velocidad</label>
+            <div class="stepper">
+                <button id="btn-bajar" title="Flecha abajo">−</button>
+                <span class="valor" id="val-velocidad">2.0</span>
+                <button id="btn-subir" title="Flecha arriba">+</button>
+            </div>
+        </div>
+
+        <div class="grupo">
+            <label>Letra</label>
+            <div class="stepper">
+                <button id="btn-letra-menos" title="Tecla [">A−</button>
+                <span class="valor" id="val-letra">64</span>
+                <button id="btn-letra-mas" title="Tecla ]">A+</button>
+            </div>
+        </div>
+
+        <div class="grupo">
+            <button id="btn-espejo" class="icono" title="Modo espejo (M)">🪞</button>
+            <button id="btn-guia" class="icono activo" title="Mostrar/ocultar línea guía (G)">▭</button>
+            <button id="btn-pantalla-completa" class="icono" title="Pantalla completa (F)">⛶</button>
+            <button id="btn-ocultar-panel" class="icono" title="Ocultar controles (H)">⌃</button>
+        </div>
+
+        <div class="grupo">
+            <button id="btn-recargar">↻ Actualizar</button>
+        </div>
+
+        <div id="estado-conexion">
+            <span class="punto-estado" id="punto-estado"></span>
+            <span id="texto-estado">Listo</span>
+        </div>
     </div>
+
+    <button id="btn-mostrar-panel" title="Mostrar controles (H)">⌄</button>
 
     <div id="guia-lectura"></div>
+    <div id="zona-tactil">
+        <div id="zona-izq"></div>
+        <div id="zona-centro"></div>
+        <div id="zona-der"></div>
+    </div>
 
     <div id="contenedor-texto">
-        <div id="texto">Sincronizando el guión...</div>
+        <div id="texto">Sincronizando el guión…</div>
     </div>
+
+    <div id="cuenta-atras"></div>
+
+    <div id="reloj">--:--:--</div>
+
+    <div id="barra-progreso"><div id="barra-progreso-fill"></div></div>
 
     <script>
         // Enlaces oficiales de publicación de Google Docs de tus dos programas
         const URL_ADULTOS = "https://docs.google.com/document/d/e/2PACX-1vQuhi11tw2fjldO-WZL-VBsgx61S_5rN3H-qhVJoZDfwmp2YdqUaf5I4XB7MphoiS_Kwq14Urf39UJn/pub";
         const URL_JOVENES = "https://docs.google.com/document/d/e/2PACX-1vRXat0Cow8oIMGgPRgwhwWI5vBAy53Q5diaiFBRqO2I4eU9MA1yiGD3ILLNhwDFF5uXtds2sOcu3JzV/pub";
 
+        const ACTUALIZACION_AUTOMATICA_MS = 60000; // refresca el guion cada 60s sin interrumpir si esta en pausa
+        const REINTENTOS_MAX = 3;
+
         const contenedor = document.getElementById('contenedor-texto');
         const txtDiv = document.getElementById('texto');
         const selectorGuion = document.getElementById('selector-guion');
-        
-        let velocidad = 2.0; 
+        const panelControles = document.getElementById('panel-controles');
+        const btnMostrarPanel = document.getElementById('btn-mostrar-panel');
+        const guiaLectura = document.getElementById('guia-lectura');
+        const barraProgresoFill = document.getElementById('barra-progreso-fill');
+        const puntoEstado = document.getElementById('punto-estado');
+        const textoEstado = document.getElementById('texto-estado');
+        const relojEl = document.getElementById('reloj');
+        const cuentaAtrasEl = document.getElementById('cuenta-atras');
+
+        let velocidad = 2.0;
+        let tamanoLetra = 64;
         let enMovimiento = false;
         let idAnimacion = null;
+        let intervaloAutoActualizar = null;
+        let ultimoTextoCargado = "";
+        let cargandoGuion = false;
 
-        // Función para obtener los datos del programa seleccionado
+        // ---------- Persistencia local de preferencias (tablet/TV se reinicia) ----------
+        function guardarPreferencias() {
+            try {
+                localStorage.setItem('tp_prefs', JSON.stringify({
+                    velocidad, tamanoLetra,
+                    espejo: txtDiv.classList.contains('espejo'),
+                    guion: selectorGuion.value
+                }));
+            } catch (e) { /* almacenamiento no disponible, se ignora */ }
+        }
+        function cargarPreferencias() {
+            try {
+                const guardado = JSON.parse(localStorage.getItem('tp_prefs') || '{}');
+                if (guardado.velocidad) velocidad = guardado.velocidad;
+                if (guardado.tamanoLetra) tamanoLetra = guardado.tamanoLetra;
+                if (guardado.espejo) txtDiv.classList.add('espejo');
+                if (guardado.guion) selectorGuion.value = guardado.guion;
+            } catch (e) { /* sin preferencias previas */ }
+        }
+
+        // ---------- Estado de conexión visual ----------
+        function setEstado(tipo, mensaje) {
+            puntoEstado.className = 'punto-estado' + (tipo === 'error' ? ' error' : tipo === 'cargando' ? ' cargando' : '');
+            textoEstado.textContent = mensaje;
+        }
+
         function obtenerDatosPrograma() {
             if (selectorGuion.value === 'jovenes') {
                 return { url: URL_JOVENES, nombre: "Explo News" };
@@ -158,144 +482,288 @@
             return { url: URL_ADULTOS, nombre: "Ágape News" };
         }
 
-        // Función que extrae y separa correctamente los párrafos de Google Docs
-        async function cargarGuion() {
+        function aplicarTamanoLetra() {
+            txtDiv.style.fontSize = tamanoLetra + 'px';
+            guiaLectura.style.fontSize = tamanoLetra + 'px';
+            document.getElementById('val-letra').textContent = tamanoLetra;
+        }
+
+        function actualizarBarraProgreso() {
+            const maxScroll = contenedor.scrollHeight - contenedor.clientHeight;
+            const pct = maxScroll > 0 ? (contenedor.scrollTop / maxScroll) * 100 : 0;
+            barraProgresoFill.style.width = Math.min(100, Math.max(0, pct)) + '%';
+        }
+
+        // ---------- Carga del guion con reintentos ----------
+        async function cargarGuion(intento = 1) {
+            if (cargandoGuion) return;
+            cargandoGuion = true;
             const programa = obtenerDatosPrograma();
+            setEstado('cargando', `Sincronizando ${programa.nombre}…`);
+            document.title = `Teleprompter - ${programa.nombre}`;
+
             try {
-                txtDiv.innerText = `Sincronizando el guión de ${programa.nombre}...`;
-                document.title = `Teleprompter - ${programa.nombre}`;
-                
-                // Evitamos el caché agregando una marca de tiempo al final de la URL
-                const respuesta = await fetch(`${programa.url}?nocache=${new Date().getTime()}`);
-                
-                if (!respuesta.ok) throw new Error("No se pudo conectar");
-                
+                const respuesta = await fetch(`${programa.url}?nocache=${Date.now()}`, { cache: 'no-store' });
+                if (!respuesta.ok) throw new Error("HTTP " + respuesta.status);
+
                 const htmlBruto = await respuesta.text();
-                
-                // Creamos un elemento temporal para parsear el código HTML del documento publicado
                 const parser = new DOMParser();
                 const docHtml = parser.parseFromString(htmlBruto, 'text/html');
-                
-                // Google Docs estructura cada línea o bloque de texto en etiquetas de párrafo <p>
                 const parrafos = docHtml.querySelectorAll('#contents p');
-                
+
                 if (parrafos.length > 0) {
-                    // Mapeamos los párrafos aislados y los unimos explícitamente con saltos de línea dobles
                     const textoEstructurado = Array.from(parrafos)
                         .map(p => p.innerText.trim())
-                        .join('\n\n'); 
+                        .join('\n\n');
 
-                    txtDiv.innerText = textoEstructurado;
-                    contenedor.scrollTop = 0;
-                    if (enMovimiento) alternarPlay();
+                    if (textoEstructurado !== ultimoTextoCargado) {
+                        const estabaEnMovimiento = enMovimiento;
+                        if (estabaEnMovimiento) pausar();
+                        txtDiv.innerText = textoEstructurado;
+                        contenedor.scrollTop = 0;
+                        ultimoTextoCargado = textoEstructurado;
+                        actualizarBarraProgreso();
+                    }
+                    setEstado('ok', `${programa.nombre} · sincronizado ${horaActual()}`);
                 } else {
-                    txtDiv.innerText = `Error al leer la estructura de ${programa.nombre}. Asegúrate de que siga publicado.`;
+                    throw new Error("Estructura vacía o no publicada");
                 }
             } catch (error) {
-                txtDiv.innerText = "Error de conexión directa.\nIntentando un método alternativo de carga...";
                 console.error(error);
-                // Plan B por si el navegador bloquea la consulta directa en entornos locales
-                cargarViaIframe();
+                if (intento < REINTENTOS_MAX) {
+                    setEstado('cargando', `Reintentando (${intento}/${REINTENTOS_MAX})…`);
+                    cargandoGuion = false;
+                    setTimeout(() => cargarGuion(intento + 1), 1500 * intento);
+                    return;
+                }
+                setEstado('error', 'Sin conexión con el guion');
+                if (!ultimoTextoCargado) {
+                    txtDiv.innerText = "No se pudo cargar el guion.\n\nVerifica tu conexión a internet o que el documento de Google Docs siga publicado en la web (Archivo → Compartir → Publicar en la web).\n\nPulsa «Actualizar» para reintentar.";
+                }
+            } finally {
+                cargandoGuion = false;
             }
         }
 
-        function cargarViaIframe() {
-            const programa = obtenerDatosPrograma();
-            // Eliminar iframe previo si existe
-            const iframeViejo = document.getElementById('iframe-carga');
-            if (iframeViejo) iframeViejo.remove();
-
-            const iframe = document.createElement('iframe');
-            iframe.id = 'iframe-carga';
-            iframe.style.display = 'none';
-            iframe.src = `${programa.url}?nocache=${new Date().getTime()}`;
-            
-            iframe.onload = function() {
-                try {
-                    const docInterno = iframe.contentDocument || iframe.contentWindow.document;
-                    const parrafos = docInterno.querySelectorAll('#contents p');
-                    if (parrafos.length > 0) {
-                        const textoEstructurado = Array.from(parrafos)
-                            .map(p => p.innerText.trim())
-                            .join('\n\n');
-                        
-                        txtDiv.innerText = textoEstructurado;
-                        contenedor.scrollTop = 0;
-                    }
-                } catch (e) {
-                    txtDiv.innerText = "Error de seguridad (CORS).\nPor favor, verifica la configuración de publicación de tu Google Doc.";
-                }
-            };
-            document.body.appendChild(iframe);
+        function horaActual() {
+            return new Date().toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' });
         }
 
-        // Bucle de animación suave mediante requestAnimationFrame
+        // ---------- Auto-actualización periódica (sin interrumpir lectura en curso) ----------
+        function iniciarAutoActualizacion() {
+            if (intervaloAutoActualizar) clearInterval(intervaloAutoActualizar);
+            intervaloAutoActualizar = setInterval(() => {
+                if (!enMovimiento) cargarGuion();
+            }, ACTUALIZACION_AUTOMATICA_MS);
+        }
+
+        // ---------- Scroll / Play ----------
         function desplazar() {
             if (enMovimiento) {
                 contenedor.scrollTop += velocidad;
+                actualizarBarraProgreso();
                 idAnimacion = requestAnimationFrame(desplazar);
             }
         }
 
+        function iniciarMovimiento() {
+            enMovimiento = true;
+            desplazar();
+            const btn = document.getElementById('btn-play');
+            btn.innerHTML = "⏸ Pausa";
+            btn.classList.add('en-marcha');
+        }
+
+        function pausar() {
+            enMovimiento = false;
+            cancelAnimationFrame(idAnimacion);
+            const btn = document.getElementById('btn-play');
+            btn.innerHTML = "▶ Play";
+            btn.classList.remove('en-marcha');
+        }
+
         function alternarPlay() {
-            enMovimiento = !enMovimiento;
             if (enMovimiento) {
-                desplazar();
-                document.getElementById('btn-play').innerText = "Pausa (Espacio)";
-                document.getElementById('btn-play').style.background = "#441111";
+                pausar();
             } else {
-                cancelAnimationFrame(idAnimacion);
-                document.getElementById('btn-play').innerText = "Play (Espacio)";
-                document.getElementById('btn-play').style.background = "#222";
+                // Cuenta atrás de 3 segundos antes de iniciar, util para que el presentador se prepare
+                let n = 3;
+                cuentaAtrasEl.textContent = n;
+                cuentaAtrasEl.classList.add('visible');
+                const t = setInterval(() => {
+                    n--;
+                    if (n <= 0) {
+                        clearInterval(t);
+                        cuentaAtrasEl.classList.remove('visible');
+                        iniciarMovimiento();
+                    } else {
+                        cuentaAtrasEl.textContent = n;
+                    }
+                }, 700);
             }
         }
 
-        // DETECTOR DE CAMBIO: Al alternar en el switch, cambia el flujo al instante
+        function cambiarVelocidad(delta) {
+            velocidad = Math.max(0.5, Math.min(15, Math.round((velocidad + delta) * 10) / 10));
+            document.getElementById('val-velocidad').textContent = velocidad.toFixed(1);
+            guardarPreferencias();
+        }
+
+        function cambiarTamanoLetra(delta) {
+            tamanoLetra = Math.max(28, Math.min(140, tamanoLetra + delta));
+            aplicarTamanoLetra();
+            guardarPreferencias();
+        }
+
+        function alternarPanel(forzarOculto) {
+            const ocultar = forzarOculto !== undefined ? forzarOculto : !panelControles.classList.contains('oculto');
+            panelControles.classList.toggle('oculto', ocultar);
+            btnMostrarPanel.classList.toggle('visible', ocultar);
+        }
+
+        function alternarPantallaCompleta() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                document.exitFullscreen().catch(() => {});
+            }
+        }
+
+        // ---------- Eventos UI ----------
         selectorGuion.addEventListener('change', () => {
-            if (enMovimiento) alternarPlay(); // Pausa el teleprompter para evitar saltos bruscos
+            if (enMovimiento) pausar();
+            ultimoTextoCargado = "";
             cargarGuion();
+            guardarPreferencias();
         });
 
-        // Eventos de los botones en la barra superior
         document.getElementById('btn-play').addEventListener('click', alternarPlay);
-        
-        document.getElementById('btn-subir').addEventListener('click', () => {
-            velocidad += 0.5;
-            document.getElementById('val-velocidad').innerText = velocidad.toFixed(1);
-        });
+        document.getElementById('btn-subir').addEventListener('click', () => cambiarVelocidad(0.5));
+        document.getElementById('btn-bajar').addEventListener('click', () => cambiarVelocidad(-0.5));
+        document.getElementById('btn-letra-mas').addEventListener('click', () => cambiarTamanoLetra(4));
+        document.getElementById('btn-letra-menos').addEventListener('click', () => cambiarTamanoLetra(-4));
 
-        document.getElementById('btn-bajar').addEventListener('click', () => {
-            if (velocidad > 0.5) velocidad -= 0.5;
-            document.getElementById('val-velocidad').innerText = velocidad.toFixed(1);
-        });
-
-        document.getElementById('btn-espejo').addEventListener('click', () => {
+        document.getElementById('btn-espejo').addEventListener('click', (e) => {
             txtDiv.classList.toggle('espejo');
-            document.getElementById('btn-espejo').style.background = txtDiv.classList.contains('espejo') ? "#114411" : "#222";
+            e.currentTarget.classList.toggle('activo', txtDiv.classList.contains('espejo'));
+            guardarPreferencias();
         });
 
-        document.getElementById('btn-recargar').addEventListener('click', cargarGuion);
+        document.getElementById('btn-guia').addEventListener('click', (e) => {
+            guiaLectura.classList.toggle('oculta');
+            e.currentTarget.classList.toggle('activo', !guiaLectura.classList.contains('oculta'));
+        });
 
-        // Control avanzado mediante atajos de teclado globales
+        document.getElementById('btn-pantalla-completa').addEventListener('click', alternarPantallaCompleta);
+        document.getElementById('btn-ocultar-panel').addEventListener('click', () => alternarPanel(true));
+        btnMostrarPanel.addEventListener('click', () => alternarPanel(false));
+        document.getElementById('btn-recargar').addEventListener('click', () => { ultimoTextoCargado = ""; cargarGuion(); });
+
+        // ---------- Atajos de teclado (utiles con teclado/control remoto en TV) ----------
         window.addEventListener('keydown', (e) => {
-            if (e.code === "Space") {
-                e.preventDefault(); // Evita que la pantalla salte abruptamente
+            switch (e.code) {
+                case 'Space':
+                    e.preventDefault(); alternarPlay(); break;
+                case 'ArrowUp':
+                    e.preventDefault(); cambiarVelocidad(0.5); break;
+                case 'ArrowDown':
+                    e.preventDefault(); cambiarVelocidad(-0.5); break;
+                case 'BracketRight':
+                    e.preventDefault(); cambiarTamanoLetra(4); break;
+                case 'BracketLeft':
+                    e.preventDefault(); cambiarTamanoLetra(-4); break;
+                case 'KeyM':
+                    document.getElementById('btn-espejo').click(); break;
+                case 'KeyG':
+                    document.getElementById('btn-guia').click(); break;
+                case 'KeyF':
+                    alternarPantallaCompleta(); break;
+                case 'KeyH':
+                    alternarPanel(); break;
+                case 'KeyR':
+                    document.getElementById('btn-recargar').click(); break;
+            }
+        });
+
+        // ---------- Gestos táctiles para tablet ----------
+        // Centro: tap = play/pausa. Doble tap en cualquier zona: ir al inicio del guion.
+        // Lateral derecho: tap = acelerar. Lateral izquierdo: tap = frenar.
+        let ultimoTap = 0;
+        document.getElementById('zona-centro').addEventListener('click', () => {
+            const ahora = Date.now();
+            if (ahora - ultimoTap < 350) {
+                contenedor.scrollTop = 0;
+                actualizarBarraProgreso();
+            } else {
                 alternarPlay();
             }
-            if (e.code === "ArrowUp") {
-                e.preventDefault();
-                velocidad += 0.5;
-                document.getElementById('val-velocidad').innerText = velocidad.toFixed(1);
-            }
-            if (e.code === "ArrowDown") {
-                e.preventDefault();
-                if (velocidad > 0.5) velocidad -= 0.5;
-                document.getElementById('val-velocidad').innerText = velocidad.toFixed(1);
-            }
+            ultimoTap = ahora;
         });
+        document.getElementById('zona-der').addEventListener('click', () => cambiarVelocidad(0.5));
+        document.getElementById('zona-izq').addEventListener('click', () => cambiarVelocidad(-0.5));
 
-        // Carga inicial automática al abrir la página
+        // Arrastre manual del texto cuando está en pausa (deslizar para reposicionar en tablet)
+        let arrastrando = false;
+        let startY = 0;
+        let startScroll = 0;
+        contenedor.addEventListener('touchstart', (e) => {
+            if (enMovimiento) return;
+            arrastrando = true;
+            startY = e.touches[0].clientY;
+            startScroll = contenedor.scrollTop;
+        }, { passive: true });
+        contenedor.addEventListener('touchmove', (e) => {
+            if (!arrastrando || enMovimiento) return;
+            const delta = startY - e.touches[0].clientY;
+            contenedor.scrollTop = startScroll + delta;
+            actualizarBarraProgreso();
+        }, { passive: true });
+        contenedor.addEventListener('touchend', () => { arrastrando = false; });
+
+        // Auto-ocultar panel tras inactividad de 6s mientras está reproduciendo (más pantalla para el texto)
+        let temporizadorInactividad = null;
+        function reiniciarTemporizadorInactividad() {
+            if (temporizadorInactividad) clearTimeout(temporizadorInactividad);
+            if (!enMovimiento) return;
+            temporizadorInactividad = setTimeout(() => {
+                if (enMovimiento) alternarPanel(true);
+            }, 6000);
+        }
+        ['mousemove', 'touchstart', 'click', 'keydown'].forEach(ev =>
+            window.addEventListener(ev, reiniciarTemporizadorInactividad)
+        );
+        const playObserver = new MutationObserver(reiniciarTemporizadorInactividad);
+        playObserver.observe(document.getElementById('btn-play'), { attributes: true });
+
+        // ---------- Reloj de estudio ----------
+        setInterval(() => {
+            relojEl.textContent = new Date().toLocaleTimeString('es-HN', { hour12: false });
+        }, 1000);
+
+        // ---------- Prevenir que se apague pantalla en tablet (si el navegador lo soporta) ----------
+        let wakeLock = null;
+        async function pedirWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                }
+            } catch (e) { /* no disponible o denegado, se ignora */ }
+        }
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') pedirWakeLock();
+        });
+        pedirWakeLock();
+
+        // ---------- Inicialización ----------
+        cargarPreferencias();
+        aplicarTamanoLetra();
+        document.getElementById('val-velocidad').textContent = velocidad.toFixed(1);
+        if (txtDiv.classList.contains('espejo')) {
+            document.getElementById('btn-espejo').classList.add('activo');
+        }
         cargarGuion();
+        iniciarAutoActualizacion();
+        contenedor.addEventListener('scroll', actualizarBarraProgreso);
     </script>
 </body>
 </html>
