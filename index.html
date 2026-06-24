@@ -35,7 +35,6 @@
             height: 100%;
             -webkit-user-select: none;
             user-select: none;
-            touch-action: none;
         }
 
         /* ===================== PANEL DE CONTROLES ===================== */
@@ -220,6 +219,7 @@
             overflow-y: auto;
             padding: 46vh 8% 54vh 8%;
             scroll-behavior: auto;
+            touch-action: pan-y;
         }
         #contenedor-texto::-webkit-scrollbar { display: none; }
         #contenedor-texto {
@@ -358,7 +358,8 @@
         }
         body.bloqueado #btn-desbloquear-flotante { display: flex; }
 
-        /* Zonas táctiles invisibles para tablet (tap centro = play/pausa, laterales = velocidad) */
+        /* Franjas táctiles angostas en los bordes para ajustar velocidad sin estorbar el scroll central.
+           El centro queda completamente libre para arrastrar el texto con el dedo. */
         #zona-tactil {
             position: fixed;
             top: 90px;
@@ -367,8 +368,14 @@
             height: calc(100% - 90px);
             z-index: 4;
             display: flex;
+            justify-content: space-between;
+            pointer-events: none;
         }
-        #zona-tactil > div { flex: 1; height: 100%; }
+        #zona-izq, #zona-der {
+            width: 56px;
+            height: 100%;
+            pointer-events: auto;
+        }
 
         /* Aviso reloj / hora actual, útil en monitor de estudio */
         #reloj {
@@ -455,9 +462,8 @@
 
     <div id="guia-lectura"></div>
     <div id="zona-tactil">
-        <div id="zona-izq"></div>
-        <div id="zona-centro"></div>
-        <div id="zona-der"></div>
+        <div id="zona-izq" title="Frenar"></div>
+        <div id="zona-der" title="Acelerar"></div>
     </div>
 
     <div id="contenedor-texto">
@@ -787,39 +793,42 @@
         });
 
         // ---------- Gestos táctiles para tablet ----------
-        // Centro: tap = play/pausa. Doble tap en cualquier zona: ir al inicio del guion.
-        // Lateral derecho: tap = acelerar. Lateral izquierdo: tap = frenar.
+        // El centro de la pantalla usa el scroll NATIVO del navegador (libre en todo momento,
+        // en pausa o en reproducción): se puede deslizar con el dedo para moverse por el guion.
+        // Doble tap sobre el texto: play/pausa. Franjas angostas laterales: ajustar velocidad.
         let ultimoTap = 0;
-        document.getElementById('zona-centro').addEventListener('click', () => {
+        let tocoElTexto = false;
+
+        contenedor.addEventListener('click', (e) => {
+            // Ignora el "click" sintético que sigue a un arrastre largo, solo cuenta tap corto
             const ahora = Date.now();
             if (ahora - ultimoTap < 350) {
-                contenedor.scrollTop = 0;
-                actualizarBarraProgreso();
-            } else {
                 alternarPlay();
+                ultimoTap = 0;
+            } else {
+                ultimoTap = ahora;
             }
-            ultimoTap = ahora;
         });
+
+        // Si el usuario empieza a arrastrar el texto mientras el teleprompter está en marcha,
+        // se pausa automáticamente para que el dedo y el auto-scroll no compitan.
+        contenedor.addEventListener('touchstart', () => {
+            tocoElTexto = true;
+        }, { passive: true });
+        contenedor.addEventListener('touchmove', () => {
+            if (enMovimiento && tocoElTexto) pausar();
+        }, { passive: true });
+        contenedor.addEventListener('touchend', () => {
+            tocoElTexto = false;
+        }, { passive: true });
+
+        // Soporte de rueda de mouse / trackpad (laptop) para mover el guion manualmente
+        contenedor.addEventListener('wheel', () => {
+            if (enMovimiento) pausar();
+        }, { passive: true });
+
         document.getElementById('zona-der').addEventListener('click', () => cambiarVelocidad(0.5));
         document.getElementById('zona-izq').addEventListener('click', () => cambiarVelocidad(-0.5));
-
-        // Arrastre manual del texto cuando está en pausa (deslizar para reposicionar en tablet)
-        let arrastrando = false;
-        let startY = 0;
-        let startScroll = 0;
-        contenedor.addEventListener('touchstart', (e) => {
-            if (enMovimiento) return;
-            arrastrando = true;
-            startY = e.touches[0].clientY;
-            startScroll = contenedor.scrollTop;
-        }, { passive: true });
-        contenedor.addEventListener('touchmove', (e) => {
-            if (!arrastrando || enMovimiento) return;
-            const delta = startY - e.touches[0].clientY;
-            contenedor.scrollTop = startScroll + delta;
-            actualizarBarraProgreso();
-        }, { passive: true });
-        contenedor.addEventListener('touchend', () => { arrastrando = false; });
 
         // Auto-ocultar panel tras inactividad de 6s mientras está reproduciendo (más pantalla para el texto)
         let temporizadorInactividad = null;
